@@ -21,6 +21,7 @@
  *******************************************************************************/
 package com.github.gorbin.asne.twitter;
 
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -82,8 +83,8 @@ public class TwitterSocialNetwork extends OAuthSocialNetwork {
     private Twitter mTwitter;
     private RequestToken mRequestToken;
 
-    public TwitterSocialNetwork(Fragment fragment, String consumerKey, String consumerSecret, String redirectURL) {
-        super(fragment);
+    public TwitterSocialNetwork(Fragment fragment, Context context, String consumerKey, String consumerSecret, String redirectURL) {
+        super(fragment,context);
 
         fConsumerKey = consumerKey;
         fConsumerSecret = consumerSecret;
@@ -484,14 +485,19 @@ public class TwitterSocialNetwork extends OAuthSocialNetwork {
 
         @Override
         protected void onPostExecute(Bundle result) {
-            if (!handleRequestResult(result, REQUEST_LOGIN)) return;
+            try {
+                if (!handleRequestResult(result, REQUEST_LOGIN)) return;
 
-            if (result.containsKey(RESULT_OAUTH_LOGIN)) {
-                Intent intent = new Intent(mSocialNetworkManager.getActivity(), OAuthActivity.class)
-                        .putExtra(OAuthActivity.PARAM_CALLBACK, fRedirectURL)
-                        .putExtra(OAuthActivity.PARAM_URL_TO_LOAD, result.getString(RESULT_OAUTH_LOGIN));
+                if (result.containsKey(RESULT_OAUTH_LOGIN)) {
+                    Intent intent = new Intent(mSocialNetworkManager.getActivity(), OAuthActivity.class)
+                            .putExtra(OAuthActivity.PARAM_CALLBACK, fRedirectURL)
+                            .putExtra(OAuthActivity.PARAM_URL_TO_LOAD, result.getString(RESULT_OAUTH_LOGIN));
 
-                mSocialNetworkManager.getActivity().startActivityForResult(intent, REQUEST_AUTH);
+                    mSocialNetworkManager.getActivity().startActivityForResult(intent, REQUEST_AUTH);
+                }
+            }
+            catch(Exception e){
+
             }
         }
     }

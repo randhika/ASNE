@@ -21,6 +21,7 @@
  *******************************************************************************/
 package com.github.gorbin.asne.facebook;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -71,6 +72,8 @@ import java.util.List;
  * @author Evgeny Gorbin (gorbin.e.o@gmail.com)
  */
 public class FacebookSocialNetwork extends SocialNetwork {
+
+    private String TAG = "asne_FacebookSocialNetwork";
     /*** Social network ID in asne modules, should be unique*/
     public static final int ID = 4;
 
@@ -82,6 +85,8 @@ public class FacebookSocialNetwork extends SocialNetwork {
     private String mPhotoPath;
     private String mStatus;
     private Bundle mBundle;
+    private Context mContext;
+    private Fragment mFragment;
     private ArrayList<String> permissions;
     private PendingAction mPendingAction = PendingAction.NONE;
     private Session.StatusCallback mSessionStatusCallback = new Session.StatusCallback() {
@@ -91,9 +96,11 @@ public class FacebookSocialNetwork extends SocialNetwork {
         }
     };
 
-    public FacebookSocialNetwork(Fragment fragment, ArrayList<String> permissions) {
-        super(fragment);
-        String applicationID = Utility.getMetadataApplicationId(fragment.getActivity());
+    public FacebookSocialNetwork(Fragment fragment, Context context, ArrayList<String> permissions) {
+        super(fragment,context);
+        mFragment = fragment;
+        mContext = context;
+        String applicationID = Utility.getMetadataApplicationId(context);
 
         if (applicationID == null) {
             throw new IllegalStateException("applicationID can't be null\n" +
@@ -101,6 +108,8 @@ public class FacebookSocialNetwork extends SocialNetwork {
         }
         this.permissions = permissions;
     }
+
+
 
     /**
      * Check is social network connected
@@ -120,15 +129,23 @@ public class FacebookSocialNetwork extends SocialNetwork {
     public void requestLogin(OnLoginCompleteListener onLoginCompleteListener) {
         super.requestLogin(onLoginCompleteListener);
 
+        Log.d(TAG, "request login");
+
         final Session openSession = mSessionTracker.getOpenSession();
 
         if (openSession != null) {
+            Log.d(TAG,"request login -> open session found");
             if (mLocalListeners.get(REQUEST_LOGIN) != null) {
                 mLocalListeners.get(REQUEST_LOGIN).onError(getID(), REQUEST_LOGIN, "Already loginned", null);
             }
         }
 
         Session currentSession = mSessionTracker.getSession();
+
+        if (currentSession != null) {
+            Log.d(TAG, "request login -> current session state " + currentSession.getState());
+        }
+
         if (currentSession == null || currentSession.getState().isClosed()) {
             mSessionTracker.setSession(null);
             Session session = new Session.Builder(mSocialNetworkManager.getActivity())
@@ -138,6 +155,9 @@ public class FacebookSocialNetwork extends SocialNetwork {
         }
 
         if (!currentSession.isOpened()) {
+
+            Log.d(TAG, "request login -> current session isOpened");
+
             Session.OpenRequest openRequest;
             openRequest = new Session.OpenRequest(mSocialNetworkManager.getActivity());
 
@@ -145,7 +165,7 @@ public class FacebookSocialNetwork extends SocialNetwork {
             if(permissions != null) {
                 openRequest.setPermissions(permissions);
             }
-            openRequest.setLoginBehavior(SessionLoginBehavior.SSO_WITH_FALLBACK);
+            openRequest.setLoginBehavior(SessionLoginBehavior.SUPPRESS_SSO);
             currentSession.openForRead(openRequest);
         }
     }
@@ -166,12 +186,33 @@ public class FacebookSocialNetwork extends SocialNetwork {
      */
     @Override
     public void logout() {
-        if (mSessionTracker == null) return;
 
-        final Session openSession = mSessionTracker.getOpenSession();
+        Log.d(TAG,"logout");
+
+        if (mSessionTracker == null){
+            Log.d(TAG,"logout failed. no Session tracker");
+            return;
+        }
+
+        Session openSession = mSessionTracker.getOpenSession();
 
         if (openSession != null) {
+            Log.d(TAG,"logout -> clear open session");
             openSession.closeAndClearTokenInformation();
+            openSession.close();
+        }
+
+        Session currentSession = mSessionTracker.getSession();
+
+        if (currentSession != null) {
+
+            Log.d(TAG,"logout -> clear current session");
+            currentSession.closeAndClearTokenInformation();
+            currentSession.close();
+        }
+
+        if (mFragment != null && mFragment.getActivity() != null) {
+            mApplicationId = Utility.getMetadataApplicationId(mFragment.getActivity());
         }
     }
 
@@ -376,15 +417,21 @@ public class FacebookSocialNetwork extends SocialNetwork {
     @Override
     public void requestPostDialog(Bundle bundle, OnPostingCompleteListener onPostingCompleteListener) {
         super.requestPostDialog(bundle, onPostingCompleteListener);
-        if (FacebookDialog.canPresentShareDialog(mSocialNetworkManager.getActivity(),
+
+        if (mSocialNetworkManager.getActivity() == null){
+            Log.e(TAG,"error no activiy");
+        }
+
+        if (FacebookDialog.canPresentShareDialog(mContext,
                 FacebookDialog.ShareDialogFeature.SHARE_DIALOG)) {
-            FacebookDialog shareDialog = new FacebookDialog.ShareDialogBuilder(mSocialNetworkManager.getActivity())
+            FacebookDialog shareDialog = new FacebookDialog.ShareDialogBuilder((Activity)mContext)
                     .setLink(bundle.getString(BUNDLE_LINK))
                     .setDescription(bundle.getString(BUNDLE_MESSAGE))
                     .setName(bundle.getString(BUNDLE_NAME))
                     .setApplicationName(bundle.getString(BUNDLE_APP_NAME))
                     .setCaption(bundle.getString(BUNDLE_CAPTION))
                     .setPicture(bundle.getString(BUNDLE_PICTURE))
+
 //                    .setFriends(bundle.getStringArrayList(DIALOG_FRIENDS))
                     .build();
             mUILifecycleHelper.trackPendingDialogCall(shareDialog.present());
@@ -591,14 +638,20 @@ public class FacebookSocialNetwork extends SocialNetwork {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mUILifecycleHelper = new UiLifecycleHelper(mSocialNetworkManager.getActivity(), mSessionStatusCallback);
-        mUILifecycleHelper.onCreate(savedInstanceState);
+        try {
+            mUILifecycleHelper = new UiLifecycleHelper((Activity)mContext, mSessionStatusCallback);
+            mUILifecycleHelper.onCreate(savedInstanceState);
 
-        initializeActiveSessionWithCachedToken(mSocialNetworkManager.getActivity());
-        finishInit();
+            initializeActiveSessionWithCachedToken((Activity)mContext);
+            finishInit();
+        }
+        catch(Exception e){
+
+        }
     }
 
     private boolean initializeActiveSessionWithCachedToken(Context context) {
+
         if (context == null) {
             return false;
         }
@@ -624,7 +677,13 @@ public class FacebookSocialNetwork extends SocialNetwork {
     @Override
     public void onResume() {
         super.onResume();
-        mUILifecycleHelper.onResume();
+
+        try {
+            mUILifecycleHelper.onResume();
+        }
+        catch(Exception e){
+
+        }
     }
 
     /**
@@ -633,7 +692,13 @@ public class FacebookSocialNetwork extends SocialNetwork {
     @Override
     public void onPause() {
         super.onPause();
-        mUILifecycleHelper.onPause();
+
+        try {
+            mUILifecycleHelper.onPause();
+        }
+        catch(Exception e){
+
+        }
     }
 
     /**
@@ -642,7 +707,13 @@ public class FacebookSocialNetwork extends SocialNetwork {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        mUILifecycleHelper.onDestroy();
+
+        try {
+            mUILifecycleHelper.onDestroy();
+        }
+        catch(Exception e){
+
+        }
     }
 
     /**
@@ -652,7 +723,12 @@ public class FacebookSocialNetwork extends SocialNetwork {
     @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        mUILifecycleHelper.onSaveInstanceState(outState);
+        try {
+            mUILifecycleHelper.onSaveInstanceState(outState);
+        }
+        catch(Exception e){
+
+        }
     }
 
     /**
@@ -680,12 +756,15 @@ public class FacebookSocialNetwork extends SocialNetwork {
 
             @Override
             public void onComplete(FacebookDialog.PendingCall pendingCall, Bundle data) {
+
             }
         });
     }
 
     private void handlePendingAction() {
+
         PendingAction previouslyPendingAction = mPendingAction;
+
         // These actions may re-set pendingAction if they are still pending, but we assume they
         // will succeed.
         mPendingAction = PendingAction.NONE;

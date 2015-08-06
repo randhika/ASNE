@@ -22,12 +22,14 @@
 package com.github.gorbin.asne.googleplus;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 
 import com.github.gorbin.asne.core.AccessToken;
 import com.github.gorbin.asne.core.SocialNetwork;
@@ -45,7 +47,7 @@ import com.github.gorbin.asne.core.listener.OnRequestSocialPersonsCompleteListen
 import com.github.gorbin.asne.core.persons.SocialPerson;
 import com.google.android.gms.auth.GoogleAuthUtil;
 import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GooglePlayServicesClient;
+import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.Scopes;
 import com.google.android.gms.common.api.CommonStatusCodes;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -67,7 +69,7 @@ import java.util.UUID;
  * @author Anton Krasov
  * @author Evgeny Gorbin (gorbin.e.o@gmail.com)
  */
-public class GooglePlusSocialNetwork extends SocialNetwork implements GooglePlayServicesClient.ConnectionCallbacks, GooglePlayServicesClient.OnConnectionFailedListener, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
+public class GooglePlusSocialNetwork extends SocialNetwork implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
 
     /*** Social network ID in asne modules, should be unique*/
     public static final int ID = 3;
@@ -86,8 +88,8 @@ public class GooglePlusSocialNetwork extends SocialNetwork implements GooglePlay
     private boolean mConnectRequested;
     private Handler mHandler = new Handler();
 
-    public GooglePlusSocialNetwork(Fragment fragment) {
-        super(fragment);
+    public GooglePlusSocialNetwork(Fragment fragment, Context context) {
+        super(fragment, context);
     }
 
     /**
@@ -598,18 +600,23 @@ public class GooglePlusSocialNetwork extends SocialNetwork implements GooglePlay
      */
     @Override
     public void onConnected(Bundle bundle) {
-        if (mConnectRequested) {
-            if (mLocalListeners.get(REQUEST_LOGIN) != null) {
-                mSharedPreferences.edit().putBoolean(SAVE_STATE_KEY_IS_CONNECTED, true).commit();
-                ((OnLoginCompleteListener) mLocalListeners.get(REQUEST_LOGIN)).onLoginSuccess(getID());
-                return;
+        try {
+            if (mConnectRequested) {
+                if (mLocalListeners.get(REQUEST_LOGIN) != null) {
+                    mSharedPreferences.edit().putBoolean(SAVE_STATE_KEY_IS_CONNECTED, true).commit();
+                    ((OnLoginCompleteListener) mLocalListeners.get(REQUEST_LOGIN)).onLoginSuccess(getID());
+                    return;
+                }
+                if (mLocalListeners.get(REQUEST_LOGIN) != null) {
+                    mLocalListeners.get(REQUEST_LOGIN).onError(getID(), REQUEST_LOGIN,
+                            "get person == null", null);
+                }
             }
-            if (mLocalListeners.get(REQUEST_LOGIN) != null) {
-                mLocalListeners.get(REQUEST_LOGIN).onError(getID(), REQUEST_LOGIN,
-                        "get person == null", null);
-            }
+            mConnectRequested = false;
         }
-        mConnectRequested = false;
+        catch(Exception e){
+            Log.e(TAG, "error"+e);
+        }
     }
 
     /**
@@ -625,13 +632,13 @@ public class GooglePlusSocialNetwork extends SocialNetwork implements GooglePlay
         mConnectRequested = false;
     }
 
-    /**
-     * Called when the client is disconnected.
-     */
-    @Override
-    public void onDisconnected() {
-        mConnectRequested = false;
-    }
+//    /**
+//     * Called when the client is disconnected.
+//     */
+//    @Override
+//    public void onDisconnected() {
+//        mConnectRequested = false;
+//    }
 
     /**
      * Called when there was an error connecting the client to the service.

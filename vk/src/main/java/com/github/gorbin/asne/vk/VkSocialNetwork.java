@@ -23,6 +23,7 @@ package com.github.gorbin.asne.vk;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -138,8 +139,8 @@ public class VkSocialNetwork extends SocialNetwork {
         }
     };
 
-    public VkSocialNetwork(Fragment fragment, String key, String[] permissions) {
-        super(fragment);
+    public VkSocialNetwork(Fragment fragment, Context context, String key, String[] permissions) {
+        super(fragment,context);
         this.key = key;
         this.permissions = permissions;
     }
@@ -239,7 +240,7 @@ public class VkSocialNetwork extends SocialNetwork {
         ((OnRequestAccessTokenCompleteListener) mLocalListeners.get(REQUEST_ACCESS_TOKEN))
                 .onRequestAccessTokenComplete(getID(),
                         new AccessToken(mSharedPreferences.getString(SAVE_STATE_KEY_OAUTH_TOKEN, null),
-                        mSharedPreferences.getString(SAVE_STATE_KEY_OAUTH_SECRET, null)));
+                                mSharedPreferences.getString(SAVE_STATE_KEY_OAUTH_SECRET, null)));
     }
 
     /**
@@ -394,8 +395,14 @@ public class VkSocialNetwork extends SocialNetwork {
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
-                ((OnRequestDetailedSocialPersonCompleteListener) mLocalListeners.get(REQUEST_GET_DETAIL_PERSON))
-                        .onRequestDetailedSocialPersonSuccess(getID(), vkPerson);
+
+                try {
+                    ((OnRequestDetailedSocialPersonCompleteListener) mLocalListeners.get(REQUEST_GET_DETAIL_PERSON))
+                            .onRequestDetailedSocialPersonSuccess(getID(), vkPerson);
+                }
+                catch(NullPointerException e){
+                    e.printStackTrace();
+                }
             }
 
             @Override
@@ -808,6 +815,6 @@ public class VkSocialNetwork extends SocialNetwork {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         int sanitizedRequestCode = requestCode % 0x10000;
-        VKUIHelper.onActivityResult(sanitizedRequestCode, resultCode, data);
+        VKUIHelper.onActivityResult(activity,sanitizedRequestCode, resultCode, data);
     }
 }
