@@ -5,7 +5,8 @@ Differences
 * No need for having it instantiated inside a fragment. Can be made application wide available by adding in MainActivity
 
 
-'''
+'''Java
+
 	public FacebookSocialNetwork fbNetwork;
 	public TwitterSocialNetwork tnetwork;
 	public VkSocialNetwork vnetwork;
