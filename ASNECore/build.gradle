@@ -6,7 +6,6 @@ android {
     buildToolsVersion '21.1.1'
 
     defaultConfig {
-        applicationId "com.github.gorbin.asne.core"
         minSdkVersion 10
         targetSdkVersion 21
         versionCode 1
@@ -14,11 +13,33 @@ android {
     }
     buildTypes {
         release {
-            runProguard false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    sourceSets {
+        main {
+            java {
+                srcDir 'src/main/java'
+            }
+            resources {
+                srcDir 'src/../lib'
+            }
+        }
+    }
 }
+
+task clearJar(type: Delete) {
+    delete 'build/libs/ProjectName.jar'
+}
+
+task makeJar(type: Copy) {
+    from('build/bundles/release/')
+    into('build/libs/')
+    include('classes.jar')
+    rename ('classes.jar', 'ProjectName.jar')
+}
+
+makeJar.dependsOn(clearJar, build)
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])

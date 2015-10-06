@@ -91,7 +91,7 @@ public class LinkedInSocialNetwork extends OAuthSocialNetwork {
     private String redirectURL;
 
     public LinkedInSocialNetwork(Fragment fragment, String consumerKey, String consumerSecret, String redirectURL, String permissions) {
-        super(fragment);
+        super(fragment, fragment.getActivity().getApplicationContext());
         if (TextUtils.isEmpty(consumerKey) || TextUtils.isEmpty(consumerSecret) || TextUtils.isEmpty(permissions)) {
             throw new IllegalArgumentException("TextUtils.isEmpty(ConsumerKey) || TextUtils.isEmpty(ConsumerSecret) || TextUtils.isEmpty(Permissions)");
         }

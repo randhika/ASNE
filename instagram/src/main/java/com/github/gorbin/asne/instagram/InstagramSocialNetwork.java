@@ -88,7 +88,7 @@ public class InstagramSocialNetwork extends OAuthSocialNetwork {
     private Bundle requestBundle;
 
     public InstagramSocialNetwork(Fragment fragment, String clientId, String clientSecret, String redirectURL, String scope) {
-        super(fragment);
+        super(fragment, fragment.getActivity().getApplicationContext());
 
         this.clientId = clientId;
         this.clientSecret = clientSecret;

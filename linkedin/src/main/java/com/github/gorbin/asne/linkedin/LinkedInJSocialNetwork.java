@@ -114,7 +114,7 @@ public class LinkedInJSocialNetwork extends OAuthSocialNetwork {
     private String mOAuthTokenSecret;
 
     public LinkedInJSocialNetwork(Fragment fragment, String consumerKey, String consumerSecret, String permissions) {
-        super(fragment);
+        super(fragment, fragment.getActivity().getApplicationContext());
 
         if (TextUtils.isEmpty(consumerKey) || TextUtils.isEmpty(consumerSecret) || TextUtils.isEmpty(permissions)) {
             throw new IllegalArgumentException("TextUtils.isEmpty(fConsumerKey) || TextUtils.isEmpty(fConsumerSecret) || TextUtils.isEmpty(fPermissions)");

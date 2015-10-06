@@ -79,7 +79,7 @@ public class OkSocialNetwork extends OAuthSocialNetwork implements OkTokenReques
     private String appSecretKey;
 
     public OkSocialNetwork(Fragment fragment, String appId, String appPublicKey, String appSecretKey, String[] permissions) {
-        super(fragment);
+        super(fragment, fragment.getActivity().getApplicationContext());
         if (TextUtils.isEmpty(appId) || TextUtils.isEmpty(appPublicKey) || TextUtils.isEmpty(appSecretKey)) {
             throw new IllegalArgumentException("TextUtils.isEmpty(appId) || TextUtils.isEmpty(appPublicKey) || TextUtils.isEmpty(appSecretKey)");
         }
